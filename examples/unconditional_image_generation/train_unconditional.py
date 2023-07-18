@@ -1,6 +1,7 @@
 import argparse
 import inspect
 import logging
+import json
 import math
 import os
 from pathlib import Path
@@ -286,6 +287,8 @@ def get_full_repo_name(model_id: str, organization: Optional[str] = None, token:
 
 
 def main(args):
+    # save command line arguments
+    
     logging_dir = os.path.join(args.output_dir, args.logging_dir)
 
     accelerator_project_config = ProjectConfiguration(total_limit=args.checkpoints_total_limit)
@@ -297,6 +300,10 @@ def main(args):
         logging_dir=logging_dir,
         project_config=accelerator_project_config,
     )
+    if accelerator.is_main_process:
+        os.makedirs(args.output_dir, exist_ok=True)
+        with open(os.path.join(args.output_dir, "args.json"), "w") as f:
+            json.dump(args.__dict__, f, indent=4)
 
     if args.logger == "tensorboard":
         if not is_tensorboard_available():
@@ -318,7 +325,7 @@ def main(args):
                 model.save_pretrained(os.path.join(output_dir, "unet"))
 
                 # make sure to pop weight so that corresponding model is not saved again
-                weights.pop()
+                weights.pop() # lizx: how this is used?
 
         def load_model_hook(models, input_dir):
             if args.use_ema:
@@ -463,7 +470,6 @@ def main(args):
         dataset = load_dataset("imagefolder", data_dir=args.train_data_dir, cache_dir=args.cache_dir, split="train")
         # See more about loading custom images at
         # https://huggingface.co/docs/datasets/v2.4.0/en/image_load#imagefolder
-
     # Preprocessing the datasets and DataLoaders creation.
     augmentations = transforms.Compose(
         [
@@ -627,8 +633,8 @@ def main(args):
                 unet = accelerator.unwrap_model(model)
 
                 if args.use_ema:
-                    ema_model.store(unet.parameters())
-                    ema_model.copy_to(unet.parameters())
+                    ema_model.store(unet.parameters()) # lizx: store current parameters in `unet`
+                    ema_model.copy_to(unet.parameters()) # lizx: load ema weights into `unet`
 
                 pipeline = DDPMPipeline(
                     unet=unet,
@@ -645,7 +651,7 @@ def main(args):
                 ).images
 
                 if args.use_ema:
-                    ema_model.restore(unet.parameters())
+                    ema_model.restore(unet.parameters()) # lizx: restore non-ema parameters in `unet`
 
                 # denormalize the images and save to tensorboard
                 images_processed = (images * 255).round().astype("uint8")
