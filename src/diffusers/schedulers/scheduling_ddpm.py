@@ -159,8 +159,7 @@ class DDPMScheduler(SchedulerMixin, ConfigMixin):
         self.one = torch.tensor(1.0)
 
         # standard deviation of the initial noise distribution
-        self.init_noise_sigma = 1.0
-
+        self.init_noise_sigma = 1.0 # lizx: not used !
         # setable values
         self.num_inference_steps = None
         self.timesteps = torch.from_numpy(np.arange(0, num_train_timesteps)[::-1].copy())
@@ -204,8 +203,9 @@ class DDPMScheduler(SchedulerMixin, ConfigMixin):
         self.timesteps = torch.from_numpy(timesteps).to(device)
 
     def _get_variance(self, t, predicted_variance=None, variance_type=None):
+        # lizx: get the variance \sigma^2_t in Algorithm 2 of the DDPM paper
         num_inference_steps = self.num_inference_steps if self.num_inference_steps else self.config.num_train_timesteps
-        prev_t = t - self.config.num_train_timesteps // num_inference_steps
+        prev_t = t - self.config.num_train_timesteps // num_inference_steps # current t - interval
         alpha_prod_t = self.alphas_cumprod[t]
         alpha_prod_t_prev = self.alphas_cumprod[prev_t] if prev_t >= 0 else self.one
         current_beta_t = 1 - alpha_prod_t / alpha_prod_t_prev
@@ -321,7 +321,7 @@ class DDPMScheduler(SchedulerMixin, ConfigMixin):
         # See formula (7) from https://arxiv.org/pdf/2006.11239.pdf
         pred_original_sample_coeff = (alpha_prod_t_prev ** (0.5) * current_beta_t) / beta_prod_t
         current_sample_coeff = current_alpha_t ** (0.5) * beta_prod_t_prev / beta_prod_t
-
+        
         # 5. Compute predicted previous sample µ_t
         # See formula (7) from https://arxiv.org/pdf/2006.11239.pdf
         pred_prev_sample = pred_original_sample_coeff * pred_original_sample + current_sample_coeff * sample
@@ -367,7 +367,6 @@ class DDPMScheduler(SchedulerMixin, ConfigMixin):
         sqrt_one_minus_alpha_prod = sqrt_one_minus_alpha_prod.flatten()
         while len(sqrt_one_minus_alpha_prod.shape) < len(original_samples.shape):
             sqrt_one_minus_alpha_prod = sqrt_one_minus_alpha_prod.unsqueeze(-1)
-
         noisy_samples = sqrt_alpha_prod * original_samples + sqrt_one_minus_alpha_prod * noise
         return noisy_samples
 

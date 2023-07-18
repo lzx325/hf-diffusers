@@ -256,7 +256,7 @@ class UNet2DModel(ModelMixin, ConfigMixin):
         # there might be better ways to encapsulate this.
         t_emb = t_emb.to(dtype=self.dtype)
         emb = self.time_embedding(t_emb)
-
+        
         if self.class_embedding is not None:
             if class_labels is None:
                 raise ValueError("class_labels should be provided when doing class conditioning")
@@ -270,7 +270,6 @@ class UNet2DModel(ModelMixin, ConfigMixin):
         # 2. pre-process
         skip_sample = sample
         sample = self.conv_in(sample)
-
         # 3. down
         down_block_res_samples = (sample,)
         for downsample_block in self.down_blocks:

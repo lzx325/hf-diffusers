@@ -31,7 +31,7 @@ from diffusers.utils.import_utils import is_xformers_available
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
 check_min_version("0.15.0.dev0")
 
-logger = get_logger(__name__, log_level="INFO")
+
 
 
 def _extract_into_tensor(arr, timesteps, broadcast_shape):
@@ -300,8 +300,14 @@ def main(args):
         logging_dir=logging_dir,
         project_config=accelerator_project_config,
     )
+    
+    os.makedirs(logging_dir, exist_ok=True)
+
+    logging.basicConfig(filename=os.path.join(logging_dir,'app.log'), filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+    logger = get_logger(__name__, log_level="INFO")
+
     if accelerator.is_main_process:
-        os.makedirs(args.output_dir, exist_ok=True)
+        
         with open(os.path.join(args.output_dir, "args.json"), "w") as f:
             json.dump(args.__dict__, f, indent=4)
 
